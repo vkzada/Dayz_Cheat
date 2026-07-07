@@ -33,12 +33,12 @@ jobs:
         $dx_inc = "$(Get-Location)\packages\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\include"
         $dx_lib = "$(Get-Location)\packages\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\release\lib\x86"
         
-        # 4. Compila forçando a arquitetura correta e limpando dependencias antigas
+        # 4. Compila forçando a inclusão manual das bibliotecas do DirectX para evitar erro de Linker
         msbuild DayZLoader.vcxproj /p:Configuration=Release /p:Platform=Win32 `
           /p:IncludePath="$dx_inc;$(IncludePath)" `
           /p:LibraryPath="$dx_lib;$(LibraryPath)" `
+          /p:AdditionalDependencies="d3d9.lib;d3dx9.lib;wininet.lib;shell32.lib;user32.lib;gdi32.lib;advapi32.lib;ole32.lib" `
           /p:WindowsTargetPlatformVersion=10.0 `
-          /p:CharacterSet=Unicode `
           /p:LinkIncremental=false
         
     - name: Upload Artifact
