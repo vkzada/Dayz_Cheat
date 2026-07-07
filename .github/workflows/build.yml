@@ -3,8 +3,6 @@ name: Build DayZ Loader
 on:
   push:
     branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
@@ -12,17 +10,24 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Add MSBuild to PATH
-      uses: microsoft/setup-msbuild@v1.1
+      uses: microsoft/setup-msbuild@v2
 
-    - name: Build Loader (Release x64)
+    - name: Build Loader
       run: |
-        msbuild examples/example_win32_directx9/DayZLoader.vcxproj /p:Configuration=Release /p:Platform=x64
+        # Este comando procura o arquivo .vcxproj e compila ele onde quer que esteja
+        $proj = Get-ChildItem -Recurse -Filter "*.vcxproj" | Select-Object -First 1
+        if ($proj) {
+          msbuild $proj.FullName /p:Configuration=Release /p:Platform=x64
+        } else {
+          Write-Error "Arquivo .vcxproj nao encontrado no repositorio!"
+          exit 1
+        }
 
     - name: Upload Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: DayZ-Loader-Exe
-        path: examples/example_win32_directx9/bin/Release_x64/DayZLoader.exe
+        path: "**/bin/Release_x64/*.exe"
