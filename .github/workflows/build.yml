@@ -23,22 +23,23 @@ jobs:
     - name: Fix Project and Build
       shell: powershell
       run: |
-        # 1. Move todos os arquivos para a raiz para simplificar tudo
+        # 1. Move todos os arquivos para a raiz
         Get-ChildItem -Recurse -Include *.cpp, *.h, *.hpp, *.vcxproj, *.filters | Copy-Item -Destination "." -Force
         
-        # 2. LIMPEZA CRITICA: Remove caminhos de pastas antigas do arquivo .vcxproj
-        # Isso faz o compilador procurar os arquivos na mesma pasta do projeto
+        # 2. Limpa caminhos relativos no arquivo de projeto
         (Get-Content DayZLoader.vcxproj) -replace 'Include="..\\..\\', 'Include="' -replace 'Include="..\\', 'Include="' | Set-Content DayZLoader.vcxproj
         
-        # 3. Localiza os caminhos das bibliotecas DirectX
+        # 3. Define caminhos do DirectX
         $dx_inc = "$(Get-Location)\packages\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\include"
         $dx_lib = "$(Get-Location)\packages\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\release\lib\x86"
         
-        # 4. Compila
+        # 4. Compila forçando a arquitetura correta e limpando dependencias antigas
         msbuild DayZLoader.vcxproj /p:Configuration=Release /p:Platform=Win32 `
           /p:IncludePath="$dx_inc;$(IncludePath)" `
           /p:LibraryPath="$dx_lib;$(LibraryPath)" `
-          /p:WindowsTargetPlatformVersion=10.0
+          /p:WindowsTargetPlatformVersion=10.0 `
+          /p:CharacterSet=Unicode `
+          /p:LinkIncremental=false
         
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
