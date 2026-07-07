@@ -12,17 +12,29 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Install DirectX SDK
+      shell: powershell
+      run: |
+        # Baixa e instala o DirectX SDK (June 2010) silenciosamente
+        $url = "https://download.microsoft.com/download/A/E/7/AE71FE08-5074-483A-8006-8479FB25E518/DXSDK_Jun10.exe"
+        $out = "dxsdk.exe"
+        Invoke-WebRequest -Uri $url -OutFile $out
+        Start-Process -FilePath $out -ArgumentList "/silent" -Wait
+        echo "DXSDK_DIR=C:\Program Files (x86 )\Microsoft DirectX SDK (June 2010)\" >> $env:GITHUB_ENV
+
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
 
     - name: Build Loader
       run: |
-        # Este comando procura o arquivo .vcxproj e compila ele onde quer que esteja
         $proj = Get-ChildItem -Recurse -Filter "*.vcxproj" | Select-Object -First 1
         if ($proj) {
-          msbuild $proj.FullName /p:Configuration=Release /p:Platform=x64
+          # Define os caminhos do DirectX manualmente para garantir
+          $dx_inc = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Include"
+          $dx_lib = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Lib\x64"
+          msbuild $proj.FullName /p:Configuration=Release /p:Platform=x64 /p:IncludePath="$dx_inc;$(IncludePath)" /p:LibraryPath="$dx_lib;$(LibraryPath)"
         } else {
-          Write-Error "Arquivo .vcxproj nao encontrado no repositorio!"
+          Write-Error "Arquivo .vcxproj nao encontrado!"
           exit 1
         }
 
