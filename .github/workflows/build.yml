@@ -15,34 +15,26 @@ jobs:
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
 
-    - name: Install DirectX Dependencies
+    - name: Download DirectX Headers
       shell: powershell
       run: |
-        # Instala o pacote completo que contem d3dx9.h
-        nuget install Microsoft.DXSDK.D3DX -Version 9.29.952.8 -OutputDirectory packages
-        # Instala tambem o core do DirectX para garantir d3d9.h
-        nuget install Microsoft.DXSDK.D3D -Version 9.29.952.7 -OutputDirectory packages
+        # Baixa os headers necessarios diretamente para a pasta do projeto
+        $url = "https://raw.githubusercontent.com/microsoft/DirectX-Graphics-Samples/master/Samples/Desktop/D3D12HelloWorld/src/HelloTriangle/d3dx12.h"
+        # Nota: O ImGui DX9 precisa de headers especificos. Vamos usar o NuGet de forma mais agressiva.
+        nuget install Microsoft.DXSDK.D3DX -Version 9.29.952.8 -OutputDirectory dxsdk
 
     - name: Fix Structure and Build
       shell: powershell
       run: |
-        # 1. Organiza os arquivos
-        mkdir -p examples/example_win32_directx9 -Force
-        Get-ChildItem -Filter "main.cpp", "options.*" -Recurse | ForEach-Object { Move-Item $_.FullName "examples/example_win32_directx9/" -Force }
-        Get-ChildItem -Filter "imgui*", "imstb*", "imconfig.h" -Recurse | ForEach-Object { Move-Item $_.FullName "./" -Force }
+        # Arruma a bagunca das pastas
+        $dx_inc = "dxsdk/Microsoft.DXSDK.D3DX.9.29.952.8/build/native/include"
+        $dx_lib = "dxsdk/Microsoft.DXSDK.D3DX.9.29.952.8/build/native/release/lib/x86"
         
-        # 2. Localiza o arquivo de projeto
-        $proj = Get-ChildItem -Recurse -Filter "DayZLoader.vcxproj" | Select-Object -First 1
-        if (-not $proj) { Write-Error "Projeto nao encontrado!"; exit 1 }
-
-        # 3. Caminhos das bibliotecas DirectX (Pega de ambos os pacotes)
-        $dx_inc1 = "$(Get-Location)\packages\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\include"
-        $dx_inc2 = "$(Get-Location)\packages\Microsoft.DXSDK.D3D.9.29.952.7\build\native\include"
-        $dx_lib1 = "$(Get-Location)\packages\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\release\lib\x86"
-        $dx_lib2 = "$(Get-Location)\packages\Microsoft.DXSDK.D3D.9.29.952.7\build\native\release\lib\x86"
+        # Move tudo para a raiz para nao ter erro de ../../
+        Get-ChildItem -Recurse -Include *.cpp, *.h, *.vcxproj, *.filters | Copy-Item -Destination "." -Force
         
-        # 4. Compila incluindo ambos os caminhos
-        msbuild $proj.FullName /p:Configuration=Release /p:Platform=Win32 /p:IncludePath="$dx_inc1;$dx_inc2;$(IncludePath)" /p:LibraryPath="$dx_lib1;$dx_lib2;$(LibraryPath)"
+        # Compila forçando o uso das pastas locais
+        msbuild DayZLoader.vcxproj /p:Configuration=Release /p:Platform=Win32 /p:IncludePath="$dx_inc;$(IncludePath )" /p:LibraryPath="$dx_lib;$(LibraryPath)" /p:PlatformToolset=v143
         
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
