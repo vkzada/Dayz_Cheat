@@ -26,15 +26,15 @@ jobs:
         $proj = Get-ChildItem -Recurse -Filter "*.vcxproj" | Select-Object -First 1
         if (-not $proj) { Write-Error "Projeto nao encontrado!"; exit 1 }
 
-        # Caminhos das bibliotecas baixadas
+        # Caminhos das bibliotecas baixadas (AGORA PARA x86)
         $dx_inc = "$(Get-Location)\packages\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\include"
-        $dx_lib = "$(Get-Location)\packages\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\release\lib\x64"
+        $dx_lib = "$(Get-Location)\packages\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\release\lib\x86"
         
-        # Compila ignorando avisos e forçando os caminhos do DirectX
-        msbuild $proj.FullName /p:Configuration=Release /p:Platform=x64 /p:IncludePath="$dx_inc;$(IncludePath)" /p:LibraryPath="$dx_lib;$(LibraryPath)" /p:LinkIncremental=false
+        # Compila em Win32 (x86) para bater com as configuracoes do seu projeto
+        msbuild $proj.FullName /p:Configuration=Release /p:Platform=Win32 /p:IncludePath="$dx_inc;$(IncludePath)" /p:LibraryPath="$dx_lib;$(LibraryPath)"
         
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: DayZ-Loader-Exe
-        path: "**/bin/Release_x64/*.exe"
+        path: "**/bin/Release_x86/*.exe"
