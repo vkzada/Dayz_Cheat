@@ -18,7 +18,6 @@ jobs:
     - name: Install DirectX Dependencies
       shell: powershell
       run: |
-        # Instala as bibliotecas necessarias via NuGet para evitar depender do SDK instalado
         nuget install Microsoft.DXSDK.D3DX -Version 9.29.952.8 -OutputDirectory packages
 
     - name: Build Loader
@@ -27,11 +26,12 @@ jobs:
         $proj = Get-ChildItem -Recurse -Filter "*.vcxproj" | Select-Object -First 1
         if (-not $proj) { Write-Error "Projeto nao encontrado!"; exit 1 }
 
-        # Configura os caminhos para usar as bibliotecas baixadas pelo NuGet
+        # Caminhos das bibliotecas baixadas
         $dx_inc = "$(Get-Location)\packages\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\include"
         $dx_lib = "$(Get-Location)\packages\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\release\lib\x64"
         
-        msbuild $proj.FullName /p:Configuration=Release /p:Platform=x64 /p:IncludePath="$dx_inc;$(IncludePath)" /p:LibraryPath="$dx_lib;$(LibraryPath)"
+        # Compila ignorando avisos e forçando os caminhos do DirectX
+        msbuild $proj.FullName /p:Configuration=Release /p:Platform=x64 /p:IncludePath="$dx_inc;$(IncludePath)" /p:LibraryPath="$dx_lib;$(LibraryPath)" /p:LinkIncremental=false
         
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
