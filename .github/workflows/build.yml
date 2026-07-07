@@ -15,14 +15,28 @@ jobs:
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
 
+    - name: Install DirectX Dependencies
+      shell: powershell
+      run: |
+        # Instala os pacotes necessarios para ter d3d9.h e d3dx9.h
+        nuget install Microsoft.DXSDK.D3DX -Version 9.29.952.8 -OutputDirectory packages
+
     - name: Build Loader
       shell: powershell
       run: |
-        # 1. Arruma os arquivos para ficarem na raiz
+        # 1. Move tudo para a raiz para simplificar
         Get-ChildItem -Recurse -Include *.cpp, *.h, *.vcxproj, *.filters | Copy-Item -Destination "." -Force
         
-        # 2. Compila usando o SDK do Windows 10 (que ja tem o DirectX 9 moderno incluso)
-        msbuild DayZLoader.vcxproj /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v143 /p:WindowsTargetPlatformVersion=10.0 /p:IncludePath="$(IncludePath)" /p:LibraryPath="$(LibraryPath)"
+        # 2. Localiza os caminhos das bibliotecas baixadas
+        $dx_inc = "$(Get-Location)\packages\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\include"
+        $dx_lib = "$(Get-Location)\packages\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\release\lib\x86"
+        
+        # 3. Compila forçando o uso do Windows SDK e os headers do DirectX
+        # Adicionamos caminhos extras para garantir que d3d9.h seja encontrado
+        msbuild DayZLoader.vcxproj /p:Configuration=Release /p:Platform=Win32 `
+          /p:IncludePath="$dx_inc;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared;$(IncludePath)" `
+          /p:LibraryPath="$dx_lib;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x86;$(LibraryPath)" `
+          /p:WindowsTargetPlatformVersion=10.0.22621.0
         
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
