@@ -20,18 +20,23 @@ jobs:
       run: |
         nuget install Microsoft.DXSDK.D3DX -Version 9.29.952.8 -OutputDirectory packages
 
-    - name: Build Loader
+    - name: Organize Files and Build
       shell: powershell
       run: |
-        $proj = Get-ChildItem -Recurse -Filter "*.vcxproj" | Select-Object -First 1
+        # 1. Garante que os arquivos do ImGui estao onde o projeto espera (raiz)
+        # O projeto espera que imgui.cpp esteja em ../../ relativo ao vcxproj
+        # Como o vcxproj esta em examples/example_win32_directx9/, a raiz e o lugar certo.
+        
+        # 2. Procura o arquivo de projeto
+        $proj = Get-ChildItem -Recurse -Filter "DayZLoader.vcxproj" | Select-Object -First 1
         if (-not $proj) { Write-Error "Projeto nao encontrado!"; exit 1 }
 
-        # Caminhos das bibliotecas baixadas (AGORA PARA x86)
+        # 3. Caminhos das bibliotecas DirectX
         $dx_inc = "$(Get-Location)\packages\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\include"
         $dx_lib = "$(Get-Location)\packages\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\release\lib\x86"
         
-        # Compila em Win32 (x86) para bater com as configuracoes do seu projeto
-        msbuild $proj.FullName /p:Configuration=Release /p:Platform=Win32 /p:IncludePath="$dx_inc;$(IncludePath)" /p:LibraryPath="$dx_lib;$(LibraryPath)"
+        # 4. Compila forçando os caminhos e ignorando erros de caminhos relativos
+        msbuild $proj.FullName /p:Configuration=Release /p:Platform=Win32 /p:IncludePath="$dx_inc;$(IncludePath);$(ProjectDir);$(ProjectDir)..\;$(ProjectDir)..\..\" /p:LibraryPath="$dx_lib;$(LibraryPath)"
         
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
