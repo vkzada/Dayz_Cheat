@@ -1,0 +1,28 @@
+name: Build DayZ Loader
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1.1
+
+    - name: Build Loader (Release x64)
+      run: |
+        msbuild examples/example_win32_directx9/DayZLoader.vcxproj /p:Configuration=Release /p:Platform=x64
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: DayZ-Loader-Exe
+        path: examples/example_win32_directx9/bin/Release_x64/DayZLoader.exe
