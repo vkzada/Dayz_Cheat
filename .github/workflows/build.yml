@@ -12,22 +12,26 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup NuGet
-      uses: nuget/setup-nuget@v1
-
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
+
+    - name: Install DirectX Dependencies
+      shell: powershell
+      run: |
+        # Instala as bibliotecas necessarias via NuGet para evitar depender do SDK instalado
+        nuget install Microsoft.DXSDK.D3DX -Version 9.29.952.8 -OutputDirectory packages
 
     - name: Build Loader
       shell: powershell
       run: |
-        # Procura o projeto
         $proj = Get-ChildItem -Recurse -Filter "*.vcxproj" | Select-Object -First 1
         if (-not $proj) { Write-Error "Projeto nao encontrado!"; exit 1 }
 
-        # Remove dependencias de bibliotecas externas antigas e compila usando bibliotecas padrão
-        # O MSBuild no GitHub já tem o DirectX moderno, vamos forçar o uso dele
-        msbuild $proj.FullName /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143 /p:WindowsTargetPlatformVersion=10.0
+        # Configura os caminhos para usar as bibliotecas baixadas pelo NuGet
+        $dx_inc = "$(Get-Location)\packages\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\include"
+        $dx_lib = "$(Get-Location)\packages\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\release\lib\x64"
+        
+        msbuild $proj.FullName /p:Configuration=Release /p:Platform=x64 /p:IncludePath="$dx_inc;$(IncludePath)" /p:LibraryPath="$dx_lib;$(LibraryPath)"
         
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
