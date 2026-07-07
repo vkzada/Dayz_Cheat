@@ -15,26 +15,14 @@ jobs:
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
 
-    - name: Download DirectX Headers
+    - name: Build Loader
       shell: powershell
       run: |
-        # Baixa os headers necessarios diretamente para a pasta do projeto
-        $url = "https://raw.githubusercontent.com/microsoft/DirectX-Graphics-Samples/master/Samples/Desktop/D3D12HelloWorld/src/HelloTriangle/d3dx12.h"
-        # Nota: O ImGui DX9 precisa de headers especificos. Vamos usar o NuGet de forma mais agressiva.
-        nuget install Microsoft.DXSDK.D3DX -Version 9.29.952.8 -OutputDirectory dxsdk
-
-    - name: Fix Structure and Build
-      shell: powershell
-      run: |
-        # Arruma a bagunca das pastas
-        $dx_inc = "dxsdk/Microsoft.DXSDK.D3DX.9.29.952.8/build/native/include"
-        $dx_lib = "dxsdk/Microsoft.DXSDK.D3DX.9.29.952.8/build/native/release/lib/x86"
-        
-        # Move tudo para a raiz para nao ter erro de ../../
+        # 1. Arruma os arquivos para ficarem na raiz
         Get-ChildItem -Recurse -Include *.cpp, *.h, *.vcxproj, *.filters | Copy-Item -Destination "." -Force
         
-        # Compila forçando o uso das pastas locais
-        msbuild DayZLoader.vcxproj /p:Configuration=Release /p:Platform=Win32 /p:IncludePath="$dx_inc;$(IncludePath )" /p:LibraryPath="$dx_lib;$(LibraryPath)" /p:PlatformToolset=v143
+        # 2. Compila usando o SDK do Windows 10 (que ja tem o DirectX 9 moderno incluso)
+        msbuild DayZLoader.vcxproj /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v143 /p:WindowsTargetPlatformVersion=10.0 /p:IncludePath="$(IncludePath)" /p:LibraryPath="$(LibraryPath)"
         
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
