@@ -18,28 +18,24 @@ jobs:
     - name: Install DirectX Dependencies
       shell: powershell
       run: |
-        # Instala o pacote que contem as bibliotecas estaticas (.lib)
+        # Baixa as bibliotecas necessarias via NuGet
         nuget install Microsoft.DXSDK.D3DX -Version 9.29.952.8 -OutputDirectory packages
 
-    - name: Fix Project and Build
+    - name: Build Loader
       shell: powershell
       run: |
-        # 1. Organiza os arquivos na raiz
+        # 1. Organiza os arquivos para garantir que o compilador os encontre
         Get-ChildItem -Recurse -Include *.cpp, *.h, *.hpp, *.vcxproj, *.filters | Copy-Item -Destination "." -Force
         
-        # 2. Limpa caminhos no arquivo de projeto
-        (Get-Content DayZLoader.vcxproj) -replace 'Include="..\\..\\', 'Include="' -replace 'Include="..\\', 'Include="' | Set-Content DayZLoader.vcxproj
-        
-        # 3. Caminhos das bibliotecas (Desta vez com caminhos forçados)
+        # 2. Define os caminhos das bibliotecas baixadas
         $dx_inc = "$(Get-Location)\packages\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\include"
         $dx_lib = "$(Get-Location)\packages\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\release\lib\x86"
         
-        # 4. Compila passando as bibliotecas DIRETAMENTE no comando
-        # Isso força o compilador a usar os arquivos que baixamos
+        # 3. Compila o projeto forçando o uso das bibliotecas corretas
         msbuild DayZLoader.vcxproj /p:Configuration=Release /p:Platform=Win32 `
           /p:IncludePath="$dx_inc;$(IncludePath)" `
           /p:LibraryPath="$dx_lib;$(LibraryPath)" `
-          /p:AdditionalDependencies="$dx_lib\d3dx9.lib;d3d9.lib;wininet.lib;shell32.lib;user32.lib;gdi32.lib;advapi32.lib;ole32.lib" `
+          /p:AdditionalDependencies="d3d9.lib;d3dx9.lib;wininet.lib;shell32.lib;user32.lib;gdi32.lib;advapi32.lib;ole32.lib" `
           /p:WindowsTargetPlatformVersion=10.0 `
           /p:LinkIncremental=false
         
