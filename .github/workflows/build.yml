@@ -1,46 +1,21 @@
 name: Build DayZ Loader
-
-on:
-  push:
-    branches: [ "main", "master" ]
-  workflow_dispatch:
-
+on: [push, workflow_dispatch]
 jobs:
   build:
     runs-on: windows-latest
-
     steps:
     - uses: actions/checkout@v4
-
-    - name: Add MSBuild to PATH
+    - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
-
-    - name: Install DirectX Dependencies
-      shell: powershell
+    - name: Install DX9
+      run: nuget install Microsoft.DXSDK.D3DX -Version 9.29.952.8 -OutputDirectory pkg
+    - name: Build
       run: |
-        # Baixa as bibliotecas necessarias via NuGet
-        nuget install Microsoft.DXSDK.D3DX -Version 9.29.952.8 -OutputDirectory packages
-
-    - name: Build Loader
-      shell: powershell
-      run: |
-        # 1. Organiza os arquivos para garantir que o compilador os encontre
-        Get-ChildItem -Recurse -Include *.cpp, *.h, *.hpp, *.vcxproj, *.filters | Copy-Item -Destination "." -Force
-        
-        # 2. Define os caminhos das bibliotecas baixadas
-        $dx_inc = "$(Get-Location)\packages\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\include"
-        $dx_lib = "$(Get-Location)\packages\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\release\lib\x86"
-        
-        # 3. Compila o projeto forçando o uso das bibliotecas corretas
-        msbuild DayZLoader.vcxproj /p:Configuration=Release /p:Platform=Win32 `
-          /p:IncludePath="$dx_inc;$(IncludePath)" `
-          /p:LibraryPath="$dx_lib;$(LibraryPath)" `
-          /p:AdditionalDependencies="d3d9.lib;d3dx9.lib;wininet.lib;shell32.lib;user32.lib;gdi32.lib;advapi32.lib;ole32.lib" `
-          /p:WindowsTargetPlatformVersion=10.0 `
-          /p:LinkIncremental=false
-        
-    - name: Upload Artifact
+        $dx_inc = "$(Get-Location)\pkg\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\include"
+        $dx_lib = "$(Get-Location)\pkg\Microsoft.DXSDK.D3DX.9.29.952.8\build\native\release\lib\x86"
+        msbuild DayZLoader.vcxproj /p:Configuration=Release /p:Platform=Win32 /p:IncludePath="$dx_inc;$(IncludePath)" /p:LibraryPath="$dx_lib;$(LibraryPath)"
+    - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: DayZ-Loader-Exe
-        path: "**/bin/Release_x86/*.exe"
+        name: DayZ-Loader
+        path: "**/Release/*.exe"
